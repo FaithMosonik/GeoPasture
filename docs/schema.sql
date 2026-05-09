@@ -1,0 +1,15 @@
+-- GeoPasture SQLite Schema
+-- This file is for documentation reference only
+-- The actual schema is created by DatabaseHelper in
+-- lib/data/local/database/database_helper.dart
+
+-- PASTORALIST  : registered app users
+-- HERD         : groups of animals managed by a pastoralist
+-- ANIMAL       : individual animals within a herd
+-- WEARABLE     : physical sensor devices attached to animals
+-- ACCELEROMETER_READING : raw sensor data, pruned after inference
+-- BEHAVIOUR_CLASSIFICATION : TFLite model output (behaviour module)
+-- DISTRESS_ALERT : alert pipeline output (behaviour module)
+-- PASTURE_MAP  : satellite analysis results (pasture module)
+-- GRAZING_SESSION : pasture selection events with carrying capacity
+-- SYNC_LOG     : tracks Firebase sync status for all records
