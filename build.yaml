@@ -1,0 +1,14 @@
+# Drift code generation configuration.
+# Run: flutter pub run build_runner build --delete-conflicting-outputs
+# This generates app_database.g.dart with all query helpers.
+
+targets:
+  $default:
+    builders:
+      drift_dev:
+        options:
+          # Generate named parameters for inserts/updates (more readable)
+          named_parameters: true
+
+         
+         
