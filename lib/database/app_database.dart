@@ -10,6 +10,9 @@ import 'tables/behaviour_classification.dart';
 import 'tables/distress_alert.dart';
 import 'tables/pasture_map.dart';
 import 'tables/sync_log.dart';
+import '../data/local/dao/animal_dao.dart';
+import '../data/local/dao/behaviour_classification_dao.dart';
+import '../data/local/dao/distress_alert_dao.dart';
 
 part 'app_database.g.dart';
 
@@ -29,24 +32,39 @@ part 'app_database.g.dart';
 ///            → Lynn's sync engine → Firestore
 ///
 ///   Firestore (Moses' pipeline) → PastureMap (download only)
-@DriftDatabase(tables: [
-  // ── Lynn's tables ───────────────────────────────
-  Pastoralist,
-  Herd,
-  Animal,
-  Wearable,
-  SyncLog,
+@DriftDatabase(
+  tables: [
+    // ── Lynn's tables ───────────────────────────────
+    Pastoralist,
+    Herd,
+    Animal,
+    Wearable,
+    SyncLog,
 
-  // ──Mosonik's tables (behaviour module) ──────────────
-  AccelerometerReading,
-  BehaviourClassification,
-  DistressAlert,
+    // ── Mosonik's tables (behaviour module) ─────────
+    AccelerometerReading,
+    BehaviourClassification,
+    DistressAlert,
 
-  // ── Moses' table (pasture module — read-only) ───
-  PastureMap,
-])
+    // ── Moses' table (pasture module — read-only) ───
+    PastureMap,
+  ],
+  daos: [
+    AnimalDao,
+    BehaviourClassificationDao,
+    DistressAlertDao,
+  ],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
+
+  @override
+  AnimalDao get animalDao => AnimalDao(this);
+  @override
+  BehaviourClassificationDao get behaviourClassificationDao =>
+      BehaviourClassificationDao(this);
+  @override
+  DistressAlertDao get distressAlertDao => DistressAlertDao(this);
 
   /// Increment this whenever you change the schema.
   /// Each bump requires a corresponding migration in [migration].

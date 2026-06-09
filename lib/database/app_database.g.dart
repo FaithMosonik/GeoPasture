@@ -4859,6 +4859,12 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $BehaviourClassificationTable(this);
   late final $DistressAlertTable distressAlert = $DistressAlertTable(this);
   late final $PastureMapTable pastureMap = $PastureMapTable(this);
+  late final AnimalDao animalDao = AnimalDao(this as AppDatabase);
+  late final BehaviourClassificationDao behaviourClassificationDao =
+      BehaviourClassificationDao(this as AppDatabase);
+  late final DistressAlertDao distressAlertDao = DistressAlertDao(
+    this as AppDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
