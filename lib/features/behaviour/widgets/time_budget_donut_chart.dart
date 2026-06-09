@@ -47,7 +47,7 @@ class TimeBudgetDonutChart extends StatelessWidget {
               color: Colors.white,
               fontWeight: FontWeight.bold,
             ),
-            radius: 60,
+            radius: 52,
           ),
         )
         .toList();
@@ -55,42 +55,52 @@ class TimeBudgetDonutChart extends StatelessWidget {
     return Column(
       children: [
         SizedBox(
-          height: 200,
+          height: 220,
           child: PieChart(
             PieChartData(
               sections: sections,
-              centerSpaceRadius: 48,
+              centerSpaceRadius: 60,
               sectionsSpace: 2,
             ),
           ),
         ),
         const SizedBox(height: 16),
-        Wrap(
-          spacing: 16,
-          runSpacing: 6,
-          alignment: WrapAlignment.center,
-          children: BehaviourClass.labels.asMap().entries.map((e) {
-            final pct = percents[e.key];
-            return Row(
-              mainAxisSize: MainAxisSize.min,
+        const Divider(height: 1),
+        const SizedBox(height: 12),
+        // Vertical legend — name on left, hours on right
+        ...percents.asMap().entries.map((e) {
+          final hours = (e.value / 100 * 24);
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 5),
+            child: Row(
               children: [
                 Container(
-                  width: 12,
-                  height: 12,
+                  width: 11,
+                  height: 11,
                   decoration: BoxDecoration(
                     color: _colours[e.key],
-                    borderRadius: BorderRadius.circular(2),
+                    shape: BoxShape.circle,
                   ),
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    BehaviourClass.labels[e.key],
+                    style: const TextStyle(fontSize: 14, color: Colors.black87),
+                  ),
+                ),
                 Text(
-                  '${e.value} ${pct.toStringAsFixed(1)}%',
-                  style: const TextStyle(fontSize: 12),
+                  '${hours.toStringAsFixed(1)} hrs',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
                 ),
               ],
-            );
-          }).toList(),
-        ),
+            ),
+          );
+        }),
       ],
     );
   }

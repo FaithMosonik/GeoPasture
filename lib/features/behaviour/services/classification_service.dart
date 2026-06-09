@@ -1,31 +1,58 @@
+import 'package:tflite_flutter/tflite_flutter.dart';
+
 import '../../../core/constants/app_constants.dart';
 import '../models/classification_result.dart';
 
-// Stub implementation — tflite_flutter re-enabled once:
-//   1. Teammate pushes assets/models/behaviour_model.tflite
-//   2. A tflite_flutter version compatible with Dart 3.11+ is confirmed
 class ClassificationService {
-  bool get isModelLoaded => false;
+  Interpreter? _interpreter;
+
+  static const String _modelPath = 'assets/models/behavior_model.tflite';
+
+  bool get isModelLoaded => _interpreter != null;
 
   Future<void> loadModel() async {
-    // No-op until model file and compatible package are available.
+    _interpreter = await Interpreter.fromAsset(_modelPath);
   }
 
-  void dispose() {}
+  void dispose() {
+    _interpreter?.close();
+    _interpreter = null;
+  }
 
+  /// Runs inference on a single [windowSize × 3] window.
+  ///
+  /// [window] must have shape [100][3] — use PreprocessingService.prepareWindow().
   Future<ClassificationResult> classify(
     String animalId,
     List<List<double>> window,
     DateTime windowStart,
     DateTime windowEnd,
   ) async {
+    assert(_interpreter != null, 'Call loadModel() before classify()');
     assert(window.length == AppConstants.windowSize);
-    // Returns equal probabilities as a neutral placeholder.
-    final probabilities = List<double>.filled(AppConstants.numClasses, 1.0 / AppConstants.numClasses);
+
+    // Input shape:  [1, 100, 3]
+    final input = [window];
+    // Output shape: [1, 5]
+    final output = [List<double>.filled(AppConstants.numClasses, 0.0)];
+
+    _interpreter!.run(input, output);
+
+    final probabilities = List<double>.from(output[0]);
+
+    int behaviourClass = 0;
+    double confidence = probabilities[0];
+    for (int i = 1; i < probabilities.length; i++) {
+      if (probabilities[i] > confidence) {
+        confidence = probabilities[i];
+        behaviourClass = i;
+      }
+    }
+
     return ClassificationResult(
       animalId: animalId,
-      behaviourClass: 0,
-      confidence: probabilities[0],
+      behaviourClass: behaviourClass,
+      confidence: confidence,
       probabilities: probabilities,
       windowStart: windowStart,
       windowEnd: windowEnd,

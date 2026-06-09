@@ -15,8 +15,7 @@ class IndividualAnimalBehaviourScreen extends StatefulWidget {
 
 class _IndividualAnimalBehaviourScreenState
     extends State<IndividualAnimalBehaviourScreen> {
-  // Replace with herd ID from auth/navigation context once auth flow is wired.
-  static const _herdId = 'placeholder_herd_id';
+  static const _herdId = 'demo-herd-001';
 
   List<({AnimalData animal, BehaviourClassificationData? latest})> _rows = [];
   bool _loading = true;

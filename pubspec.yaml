@@ -24,8 +24,7 @@ dependencies:
   firebase_storage: ^12.1.3
 
   # ── TFLite inference ─────────────────────────────────────────────────
-  # tflite_flutter re-added once teammate pushes model file + SDK-compatible version confirmed
-  # tflite_flutter: ^0.10.4
+  tflite_flutter: ^0.12.1
 
   # ── Accelerometer sensor ─────────────────────────────────────────────
   sensors_plus: ^4.0.0
