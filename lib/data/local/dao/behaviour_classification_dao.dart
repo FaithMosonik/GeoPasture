@@ -39,4 +39,11 @@ class BehaviourClassificationDao extends DatabaseAccessor<AppDatabase>
           alertProcessed: Value(true),
         ),
       );
+
+  Future<BehaviourClassificationData?> getLatestForAnimal(String animalId) =>
+      (select(behaviourClassification)
+            ..where((c) => c.animalId.equals(animalId))
+            ..orderBy([(c) => OrderingTerm.desc(c.windowEnd)])
+            ..limit(1))
+          .getSingleOrNull();
 }

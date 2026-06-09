@@ -13,11 +13,11 @@ abstract class BehaviourClass {
   static const int walking = 4;
 
   static const List<String> labels = [
-    'grazing',    // index 0 — trained, reliable
-    'ruminating', // index 1 — trained, reliable
-    'standing',   // index 2 — trained, reliable
-    'lying',      // index 3 — undertrained, low reliability
-    'walking',    // index 4 — undertrained, low reliability
+    'Feeding',     // index 0 — trained, reliable
+    'Rumination',  // index 1 — trained, reliable
+    'Standing',    // index 2 — trained, reliable
+    'Lying',       // index 3 — undertrained, low reliability
+    'Walking',     // index 4 — undertrained, low reliability
   ];
 
   static String labelFor(int index) => labels[index];

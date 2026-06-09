@@ -15,4 +15,7 @@ class AnimalDao extends DatabaseAccessor<AppDatabase> with _$AnimalDaoMixin {
   Future<AnimalData?> getAnimalByWearableId(String wearableId) =>
       (select(animal)..where((a) => a.wearableId.equals(wearableId)))
           .getSingleOrNull();
+
+  Future<AnimalData?> getAnimalById(String id) =>
+      (select(animal)..where((a) => a.id.equals(id))).getSingleOrNull();
 }
