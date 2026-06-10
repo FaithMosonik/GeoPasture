@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:workmanager/workmanager.dart';
 
+import 'core/services/data_seeder.dart';
 import 'core/services/notification_service.dart';
 import 'core/workers/alert_worker.dart';
 import 'data/local/dao/animal_dao.dart';
@@ -27,13 +28,16 @@ Future<void> main() async {
 
   // ── Database & DAOs ────────────────────────────────────────────────────
   final db = AppDatabase();
+  await DataSeeder(db).seedIfEmpty();
   final animalDao = AnimalDao(db);
   final classificationDao = BehaviourClassificationDao(db);
   final distressAlertDao = DistressAlertDao(db);
 
   // ── Services ───────────────────────────────────────────────────────────
   final classificationService = ClassificationService();
-  await classificationService.loadModel(); // no-op until model file arrives
+  try {
+    await classificationService.loadModel();
+  } catch (_) {}
 
   final repo = BehaviourRepository(
     animalDao: animalDao,
