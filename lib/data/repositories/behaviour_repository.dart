@@ -133,8 +133,13 @@ class BehaviourRepository {
     );
   }
 
+  ClassificationService get classificationService => _classificationService;
+
   Future<List<DistressAlertData>> getActiveAlerts() =>
       _distressAlertDao.getUnacknowledgedAlerts();
+
+  Future<List<DistressAlertData>> getAllAlerts() =>
+      _distressAlertDao.getAllAlerts();
 
   Future<void> acknowledgeAlert(String alertId) =>
       _distressAlertDao.acknowledgeAlert(alertId);

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/notifiers/alert_count_notifier.dart';
 import '../../../data/repositories/behaviour_repository.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../models/time_budget.dart';
@@ -21,7 +22,6 @@ class _HerdBehaviourOverviewScreenState
 
   TimeBudget? _budget;
   int _animalCount = 0;
-  int _alertCount = 0;
   bool _loading = true;
 
   @override
@@ -34,15 +34,15 @@ class _HerdBehaviourOverviewScreenState
     setState(() => _loading = true);
     final repo = context.read<BehaviourRepository>();
     final animals = await repo.getAnimalsByHerd(_herdId);
-    final alerts  = await repo.getActiveAlerts();
     final budget  = await repo.getHerdDailyTimeBudget(_herdId, DateTime.now());
     if (mounted) {
       setState(() {
         _animalCount = animals.length;
-        _alertCount  = alerts.length;
         _budget      = budget;
         _loading     = false;
       });
+      // Keep badge + stat card in sync after a manual refresh
+      await context.read<AlertCountNotifier>().refresh();
     }
   }
 
@@ -57,7 +57,7 @@ class _HerdBehaviourOverviewScreenState
           style: TextStyle(
             fontWeight: FontWeight.bold,
             letterSpacing: 2.5,
-            fontSize: 18,
+            fontSize: 22,
           ),
         ),
         leading: IconButton(
@@ -69,7 +69,7 @@ class _HerdBehaviourOverviewScreenState
           Padding(
             padding: EdgeInsets.only(right: 8),
             child: IconButton(
-              icon: Icon(Icons.account_circle_outlined, size: 28),
+              icon: Icon(Icons.account_circle_outlined, size: 30, color: Colors.white),
               onPressed: null,
               tooltip: 'Profile',
             ),
@@ -107,7 +107,7 @@ class _HerdBehaviourOverviewScreenState
         Text(
           'WELCOME BACK,',
           style: TextStyle(
-            fontSize: 12,
+            fontSize: 18,
             letterSpacing: 1.8,
             color: Colors.grey[600],
             fontWeight: FontWeight.w500,
@@ -117,7 +117,7 @@ class _HerdBehaviourOverviewScreenState
         const Text(
           'Faith Mosonik',
           style: TextStyle(
-            fontSize: 30,
+            fontSize: 34,
             fontWeight: FontWeight.bold,
             color: AppTheme.primaryGreen,
             height: 1.1,
@@ -132,6 +132,7 @@ class _HerdBehaviourOverviewScreenState
   Widget _buildStatRow() {
     final monitoringHrs =
         ((_budget?.totalWindows ?? 0) * 10 / 3600).toStringAsFixed(1);
+    final alertCount = context.watch<AlertCountNotifier>().count;
 
     return Row(
       children: [
@@ -147,9 +148,9 @@ class _HerdBehaviourOverviewScreenState
         Expanded(
           child: _StatCard(
             icon: Icons.notifications_active,
-            value: '$_alertCount',
+            value: '$alertCount',
             label: 'Active Alerts',
-            color: _alertCount > 0 ? AppTheme.alertRed : AppTheme.accentGreen,
+            color: alertCount > 0 ? AppTheme.alertRed : AppTheme.accentGreen,
           ),
         ),
         const SizedBox(width: 10),

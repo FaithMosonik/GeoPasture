@@ -11,85 +11,96 @@ class AlertService {
   final DistressAlertDao _distressAlertDao;
   static const _uuid = Uuid();
 
+  // Require at least 30 minutes of monitoring before any alert fires.
+  // Prevents noise alerts on a handful of windows at the start of the day.
+  static const _minWindows = 36; // 36 × 10 s = 6 min (conservative minimum)
+
   AlertService(this._distressAlertDao);
 
-  /// Evaluates [budget] against alert thresholds and inserts a [DistressAlert]
-  /// for each breach. [lastClassificationId] is the most recent classification
-  /// record in the budget window — used as the FK reference on the alert row.
-  /// [pastoralistId] is resolved by the caller from the animal's herd.
-  ///
-  /// Returns the IDs of any alerts that were inserted (empty if no breach).
   Future<List<String>> evaluateAndAlert({
     required TimeBudget budget,
     required AnimalData animal,
     required String pastoralistId,
     required String lastClassificationId,
   }) async {
+    // Insufficient data — skip evaluation entirely
+    if (budget.totalWindows < _minWindows) return [];
+
     final inserted = <String>[];
     final now = DateTime.now();
-    final animalLabel = animal.name ?? 'Animal ${animal.id}';
+    final label = animal.name ?? 'Animal ${animal.id}';
+
+    // Actual monitored hours — used in messages so they reflect reality
+    final monitoredHrs = budget.totalWindows * 10 / 3600;
+    final monitoredLabel = '${monitoredHrs.toStringAsFixed(1)} hrs of monitoring';
 
     if (budget.grazingPercent < AppConstants.feedingMinThreshold) {
-      final hours = (budget.grazingPercent / 100 * 24).toStringAsFixed(1);
-      final id = _uuid.v4();
-      await _distressAlertDao.insertAlert(
-        DistressAlertCompanion(
+      if (!await _distressAlertDao.hasActiveAlert(
+          animal.id, AlertType.lowFeeding)) {
+        final actualHrs =
+            (budget.grazingPercent / 100 * monitoredHrs).toStringAsFixed(1);
+        final id = _uuid.v4();
+        await _distressAlertDao.insertAlert(DistressAlertCompanion(
           id: Value(id),
           animalId: Value(animal.id),
           classificationId: Value(lastClassificationId),
           pastoralistId: Value(pastoralistId),
           alertType: const Value(AlertType.lowFeeding),
           message: Value(
-            '$animalLabel has been feeding for only $hours hours '
-            'in the last 24 hours.',
+            '$label has been feeding for only $actualHrs hrs out of '
+            '$monitoredLabel today.',
           ),
           severity: const Value(AlertSeverity.high),
           timestamp: Value(now),
-        ),
-      );
-      inserted.add(id);
+        ));
+        inserted.add(id);
+      }
     }
 
     if (budget.ruminatingPercent < AppConstants.ruminationMinThreshold) {
-      final hours = (budget.ruminatingPercent / 100 * 24).toStringAsFixed(1);
-      final id = _uuid.v4();
-      await _distressAlertDao.insertAlert(
-        DistressAlertCompanion(
+      if (!await _distressAlertDao.hasActiveAlert(
+          animal.id, AlertType.lowRumination)) {
+        final actualHrs =
+            (budget.ruminatingPercent / 100 * monitoredHrs).toStringAsFixed(1);
+        final id = _uuid.v4();
+        await _distressAlertDao.insertAlert(DistressAlertCompanion(
           id: Value(id),
           animalId: Value(animal.id),
           classificationId: Value(lastClassificationId),
           pastoralistId: Value(pastoralistId),
           alertType: const Value(AlertType.lowRumination),
           message: Value(
-            '$animalLabel has been ruminating for only $hours hours '
-            'in the last 24 hours.',
+            '$label has been ruminating for only $actualHrs hrs out of '
+            '$monitoredLabel today.',
           ),
           severity: const Value(AlertSeverity.medium),
           timestamp: Value(now),
-        ),
-      );
-      inserted.add(id);
+        ));
+        inserted.add(id);
+      }
     }
 
     if (budget.walkingPercent > AppConstants.walkingMaxThreshold) {
-      final hours = (budget.walkingPercent / 100 * 24).toStringAsFixed(1);
-      final id = _uuid.v4();
-      await _distressAlertDao.insertAlert(
-        DistressAlertCompanion(
+      if (!await _distressAlertDao.hasActiveAlert(
+          animal.id, AlertType.excessiveWalking)) {
+        final actualHrs =
+            (budget.walkingPercent / 100 * monitoredHrs).toStringAsFixed(1);
+        final id = _uuid.v4();
+        await _distressAlertDao.insertAlert(DistressAlertCompanion(
           id: Value(id),
           animalId: Value(animal.id),
           classificationId: Value(lastClassificationId),
           pastoralistId: Value(pastoralistId),
           alertType: const Value(AlertType.excessiveWalking),
           message: Value(
-            '$animalLabel has been walking for $hours hours '
-            'in the last 24 hours.',
+            '$label has been walking for $actualHrs hrs out of '
+            '$monitoredLabel today — above the normal range.',
           ),
           severity: const Value(AlertSeverity.medium),
           timestamp: Value(now),
-        ),
-      );
-      inserted.add(id);
+        ));
+        inserted.add(id);
+      }
     }
 
     return inserted;

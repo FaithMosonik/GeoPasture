@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/notifiers/alert_count_notifier.dart';
 import '../../../data/repositories/behaviour_repository.dart';
 import '../../../database/app_database.dart';
 import '../../../database/tables/distress_alert.dart';
@@ -69,9 +70,10 @@ class AlertDetailScreen extends StatelessWidget {
                     backgroundColor: AppTheme.primaryGreen,
                   ),
                   onPressed: () async {
-                    await context
-                        .read<BehaviourRepository>()
-                        .acknowledgeAlert(alert.id);
+                    final repo = context.read<BehaviourRepository>();
+                    final notifier = context.read<AlertCountNotifier>();
+                    await repo.acknowledgeAlert(alert.id);
+                    await notifier.refresh();
                     if (context.mounted) Navigator.pop(context);
                   },
                   child: const Text('Acknowledge Alert'),

@@ -7,7 +7,7 @@ import '../../database/app_database.dart';
 import '../../database/tables/behaviour_classification.dart';
 import '../../database/tables/distress_alert.dart';
 
-/// Populates the local database with one week of realistic demo data.
+/// Populates the local database with two weeks of realistic demo data.
 /// Only runs when the Animal table is empty — safe to leave in production
 /// until real sensor data takes over.
 class DataSeeder {
@@ -26,16 +26,23 @@ class DataSeeder {
     (id: 'demo-animal-002', name: 'Daisy',  species: 'cattle', wearable: 'WBL-002'),
     (id: 'demo-animal-003', name: 'Rosie',  species: 'cattle', wearable: 'WBL-003'),
     (id: 'demo-animal-004', name: 'Bruno',  species: 'cattle', wearable: 'WBL-004'),
-    (id: 'demo-animal-005', name: 'Luna',   species: 'goat',   wearable: 'WBL-005'),
+    (id: 'demo-animal-005', name: 'Luna',   species: 'cattle', wearable: 'WBL-005'),
+    (id: 'demo-animal-006', name: 'Mia',    species: 'cattle', wearable: 'WBL-006'),
+    (id: 'demo-animal-007', name: 'Max',    species: 'cattle', wearable: 'WBL-007'),
+    (id: 'demo-animal-008', name: 'Cleo',   species: 'cattle', wearable: 'WBL-008'),
   ];
 
-  // Windows per day per animal  (1 window = 10 s  →  500 windows ≈ 83 min)
-  static const _windowsPerDay = 500;
+  // 288 windows/day = one window every 5 min → full 24-hour coverage
+  static const _windowsPerDay = 288;
+
+  // History depth
+  static const _daysOfHistory = 7;
 
   // Behaviour distributions — [grazing, ruminating, standing, lying, walking]
-  static const _normal   = [0.40, 0.30, 0.20, 0.07, 0.03]; // healthy
-  static const _lowGraze = [0.03, 0.30, 0.40, 0.25, 0.02]; // Bessie today  → HIGH alert
-  static const _lowRumin = [0.40, 0.02, 0.30, 0.25, 0.03]; // Daisy today   → MEDIUM alert
+  static const _normal      = [0.40, 0.30, 0.20, 0.07, 0.03]; // healthy
+  static const _lowGraze    = [0.03, 0.30, 0.40, 0.25, 0.02]; // Bessie today → HIGH
+  static const _lowRumin    = [0.40, 0.02, 0.30, 0.25, 0.03]; // Daisy today  → MEDIUM
+  static const _highWalking = [0.10, 0.05, 0.00, 0.00, 0.85]; // Mia today    → MEDIUM
 
   // ── Public entry point ──────────────────────────────────────────────────
 
@@ -54,10 +61,10 @@ class DataSeeder {
 
     final today = DateTime.now();
 
-    // Past 6 days — healthy behaviour + two historical acknowledged alerts
-    for (int daysAgo = 6; daysAgo >= 1; daysAgo--) {
+    // Past 13 days — healthy behaviour + historical acknowledged alerts
+    for (int daysAgo = _daysOfHistory - 1; daysAgo >= 1; daysAgo--) {
       final date = _dayStart(today.subtract(Duration(days: daysAgo)));
-      final lastIds = <String, String>{}; // animalId → last classificationId
+      final lastIds = <String, String>{};
 
       for (final a in _animalDefs) {
         lastIds[a.id] = await _insertDayClassifications(
@@ -67,8 +74,8 @@ class DataSeeder {
         );
       }
 
-      // Day 4 ago: Rosie had a low-feeding episode (resolved, acknowledged)
-      if (daysAgo == 4) {
+      // Day 10: Rosie — low feeding (resolved)
+      if (daysAgo == 10) {
         await _insertAlert(
           animalId: 'demo-animal-003',
           classificationId: lastIds['demo-animal-003']!,
@@ -82,8 +89,8 @@ class DataSeeder {
         );
       }
 
-      // Day 2 ago: Bruno had a low-rumination episode (resolved, acknowledged)
-      if (daysAgo == 2) {
+      // Day 6: Bruno — low rumination (resolved)
+      if (daysAgo == 6) {
         await _insertAlert(
           animalId: 'demo-animal-004',
           classificationId: lastIds['demo-animal-004']!,
@@ -96,49 +103,115 @@ class DataSeeder {
           isAcknowledged: 1,
         );
       }
+
+      // Day 3: Max — excessive walking (resolved)
+      if (daysAgo == 3) {
+        await _insertAlert(
+          animalId: 'demo-animal-007',
+          classificationId: lastIds['demo-animal-007']!,
+          alertType: AlertType.excessiveWalking,
+          severity: AlertSeverity.medium,
+          message:
+              'Max spent 87.2% of ${_formatDate(date)} walking — '
+              'above the 85.0% maximum. Fence checked, no issue found.',
+          timestamp: date.add(const Duration(hours: 14)),
+          isAcknowledged: 1,
+        );
+      }
+
+      // Day 1: Cleo — low feeding (resolved)
+      if (daysAgo == 1) {
+        await _insertAlert(
+          animalId: 'demo-animal-008',
+          classificationId: lastIds['demo-animal-008']!,
+          alertType: AlertType.lowFeeding,
+          severity: AlertSeverity.high,
+          message:
+              'Cleo spent only 4.1% grazing on ${_formatDate(date)} — '
+              'below the 5.0% minimum. Resolved after supplemental feeding.',
+          timestamp: date.add(const Duration(hours: 20)),
+          isAcknowledged: 1,
+        );
+      }
     }
 
-    // Today — Bessie (low grazing) and Daisy (low rumination)
+    // Today — only seed windows that have actually elapsed since midnight.
+    // windowInterval = 86400 / 288 = 300 s (one window every 5 min).
+    final todayStart    = _dayStart(today);
+    final secondsSoFar  = today.difference(todayStart).inSeconds;
+    final todayWindows  = (secondsSoFar / 300).floor().clamp(1, _windowsPerDay);
+
     final lastIdsToday = <String, String>{};
 
     for (final a in _animalDefs) {
       final dist = switch (a.id) {
         'demo-animal-001' => _lowGraze,
         'demo-animal-002' => _lowRumin,
+        'demo-animal-006' => _highWalking,
         _                 => _normal,
       };
 
       lastIdsToday[a.id] = await _insertDayClassifications(
         animalId: a.id,
-        date: _dayStart(today),
+        date: todayStart,
         distribution: dist,
+        windowCount: todayWindows,
       );
     }
 
-    // Today's unacknowledged alerts
-    await _insertAlert(
-      animalId: 'demo-animal-001',
-      classificationId: lastIdsToday['demo-animal-001']!,
-      alertType: AlertType.lowFeeding,
-      severity: AlertSeverity.high,
-      message:
-          'Bessie has spent only 3.0% of today grazing — below the 5.0% '
-          'minimum. Check for illness or poor pasture access.',
-      timestamp: today.subtract(const Duration(hours: 1)),
-      isAcknowledged: 0,
-    );
+    // Only seed active alerts once at least 3 hours of monitoring have elapsed.
+    // Timestamps are placed proportionally within the elapsed window so they
+    // never appear in the future or at an implausibly early hour.
+    final hoursElapsed = secondsSoFar / 3600.0;
+    if (hoursElapsed >= 3) {
+      final monitoredHrs = todayWindows * 10 / 3600.0;
+      final monitoredLabel = '${monitoredHrs.toStringAsFixed(1)} hrs of monitoring';
 
-    await _insertAlert(
-      animalId: 'demo-animal-002',
-      classificationId: lastIdsToday['demo-animal-002']!,
-      alertType: AlertType.lowRumination,
-      severity: AlertSeverity.medium,
-      message:
-          'Daisy has spent only 2.0% of today ruminating — below the 3.0% '
-          'minimum. This may indicate digestive issues.',
-      timestamp: today.subtract(const Duration(minutes: 30)),
-      isAcknowledged: 0,
-    );
+      final bessieGrazingHrs = (3.0 / 100 * monitoredHrs).toStringAsFixed(1);
+      final daisyRuminHrs    = (2.0 / 100 * monitoredHrs).toStringAsFixed(1);
+      final miaWalkingHrs    = (85.0 / 100 * monitoredHrs).toStringAsFixed(1);
+
+      // Spread alert timestamps across 60–80% of the elapsed day
+      final bessieTs = todayStart.add(Duration(seconds: (secondsSoFar * 0.60).round()));
+      final daisyTs  = todayStart.add(Duration(seconds: (secondsSoFar * 0.70).round()));
+      final miaTs    = todayStart.add(Duration(seconds: (secondsSoFar * 0.80).round()));
+
+      await _insertAlert(
+        animalId: 'demo-animal-001',
+        classificationId: lastIdsToday['demo-animal-001']!,
+        alertType: AlertType.lowFeeding,
+        severity: AlertSeverity.high,
+        message:
+            'Bessie has been feeding for only $bessieGrazingHrs hrs out of '
+            '$monitoredLabel today.',
+        timestamp: bessieTs,
+        isAcknowledged: 0,
+      );
+
+      await _insertAlert(
+        animalId: 'demo-animal-002',
+        classificationId: lastIdsToday['demo-animal-002']!,
+        alertType: AlertType.lowRumination,
+        severity: AlertSeverity.medium,
+        message:
+            'Daisy has been ruminating for only $daisyRuminHrs hrs out of '
+            '$monitoredLabel today.',
+        timestamp: daisyTs,
+        isAcknowledged: 0,
+      );
+
+      await _insertAlert(
+        animalId: 'demo-animal-006',
+        classificationId: lastIdsToday['demo-animal-006']!,
+        alertType: AlertType.excessiveWalking,
+        severity: AlertSeverity.medium,
+        message:
+            'Mia has been walking for $miaWalkingHrs hrs out of '
+            '$monitoredLabel today — above the normal range.',
+        timestamp: miaTs,
+        isAcknowledged: 0,
+      );
+    }
   }
 
   // ── Insert helpers ──────────────────────────────────────────────────────
@@ -177,20 +250,24 @@ class DataSeeder {
     }
   }
 
-  /// Inserts [_windowsPerDay] classification records starting at 06:00 on [date].
+  /// Inserts up to [windowCount] classification records starting at 00:00 on [date].
+  /// Defaults to [_windowsPerDay] for historical days; pass a smaller value for today.
   /// Returns the ID of the last inserted record (used as classificationId in alerts).
   Future<String> _insertDayClassifications({
     required String animalId,
     required DateTime date,
     required List<double> distribution,
+    int windowCount = _windowsPerDay,
   }) async {
-    final classes = _buildClassSequence(distribution);
-    final recordingStart = date.add(const Duration(hours: 6));
+    final classes = _buildClassSequence(distribution, windowCount);
+    final dayStart = date;
     String lastId = '';
 
     await _db.batch((batch) {
       for (int i = 0; i < classes.length; i++) {
-        final windowStart = recordingStart.add(Duration(seconds: i * 10));
+        // Spread windows evenly across 24 hours
+        final secondsOffset = (i * 86400 / _windowsPerDay).round();
+        final windowStart = dayStart.add(Duration(seconds: secondsOffset));
         final windowEnd   = windowStart.add(const Duration(seconds: 10));
         final cls  = classes[i];
         final id   = _uuid.v4();
@@ -248,14 +325,11 @@ class DataSeeder {
 
   // ── Utility helpers ─────────────────────────────────────────────────────
 
-  /// Returns a shuffled list of [_windowsPerDay] class indices
-  /// matching the given probability [distribution].
-  List<int> _buildClassSequence(List<double> distribution) {
+  List<int> _buildClassSequence(List<double> distribution, [int windowCount = _windowsPerDay]) {
     final counts = distribution
-        .map((p) => (p * _windowsPerDay).round())
+        .map((p) => (p * windowCount).round())
         .toList();
-    // Absorb rounding difference into the grazing bucket
-    final diff = _windowsPerDay - counts.reduce((a, b) => a + b);
+    final diff = windowCount - counts.reduce((a, b) => a + b);
     counts[BehaviourClass.grazing] += diff;
 
     final seq = <int>[];
@@ -266,9 +340,8 @@ class DataSeeder {
     return seq;
   }
 
-  /// Returns a 5-element softmax-like probability vector dominated by [cls].
   List<double> _fakeProbs(int cls) {
-    final confidence = 0.70 + _rng.nextDouble() * 0.25; // 0.70–0.95
+    final confidence = 0.70 + _rng.nextDouble() * 0.25;
     final remaining  = 1.0 - confidence;
     final raw = List.generate(5, (i) => i == cls ? 0.0 : _rng.nextDouble());
     final sum = raw.reduce((a, b) => a + b);

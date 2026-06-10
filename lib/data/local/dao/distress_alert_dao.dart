@@ -21,6 +21,23 @@ class DistressAlertDao extends DatabaseAccessor<AppDatabase>
         const DistressAlertCompanion(isAcknowledged: Value(1)),
       );
 
+  Future<List<DistressAlertData>> getAllAlerts() =>
+      (select(distressAlert)
+            ..orderBy([(a) => OrderingTerm.desc(a.timestamp)]))
+          .get();
+
+  Future<bool> hasActiveAlert(String animalId, String alertType) async {
+    final rows = await (select(distressAlert)
+          ..where(
+            (a) =>
+                a.animalId.equals(animalId) &
+                a.alertType.equals(alertType) &
+                a.isAcknowledged.equals(0),
+          ))
+        .get();
+    return rows.isNotEmpty;
+  }
+
   Future<List<DistressAlertData>> getUnsynced() =>
       (select(distressAlert)..where((a) => a.synced.equals(0))).get();
 }

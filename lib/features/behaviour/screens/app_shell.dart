@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../data/repositories/behaviour_repository.dart';
+import '../../../core/notifiers/alert_count_notifier.dart';
 import 'alerts_screen.dart';
 import 'herd_behaviour_overview_screen.dart';
 import 'individual_animal_behaviour_screen.dart';
@@ -15,7 +15,6 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int _currentIndex = 0;
-  int _alertCount = 0;
 
   static const _screens = <Widget>[
     HerdBehaviourOverviewScreen(),
@@ -24,26 +23,18 @@ class _AppShellState extends State<AppShell> {
     AlertsScreen(),
   ];
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadAlertCount());
-  }
-
-  Future<void> _loadAlertCount() async {
-    final alerts =
-        await context.read<BehaviourRepository>().getActiveAlerts();
-    if (mounted) setState(() => _alertCount = alerts.length);
-  }
-
   void _onTabTap(int index) {
     setState(() => _currentIndex = index);
-    // Refresh badge whenever user leaves the alerts tab (may have acknowledged some)
-    if (_currentIndex == 3) _loadAlertCount();
+    // Refresh badge when leaving the alerts tab — user may have acknowledged alerts
+    if (index != 3) {
+      context.read<AlertCountNotifier>().refresh();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final alertCount = context.watch<AlertCountNotifier>().count;
+
     return Scaffold(
       body: IndexedStack(index: _currentIndex, children: _screens),
       bottomNavigationBar: Container(
@@ -59,32 +50,32 @@ class _AppShellState extends State<AppShell> {
           ],
         ),
         child: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: _onTabTap,
-        type: BottomNavigationBarType.fixed,
-        items: [
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.bar_chart),
-            label: 'Dashboard',
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.map_outlined),
-            label: 'Pastures',
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.pets),
-            label: 'Herds',
-          ),
-          BottomNavigationBarItem(
-            icon: Badge(
-              isLabelVisible: _alertCount > 0,
-              label: Text('$_alertCount'),
-              child: const Icon(Icons.notifications_outlined),
+          currentIndex: _currentIndex,
+          onTap: _onTabTap,
+          type: BottomNavigationBarType.fixed,
+          items: [
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.bar_chart),
+              label: 'Dashboard',
             ),
-            label: 'Alerts',
-          ),
-        ],
-      ),
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.map_outlined),
+              label: 'Pastures',
+            ),
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.pets),
+              label: 'Herds',
+            ),
+            BottomNavigationBarItem(
+              icon: Badge(
+                isLabelVisible: alertCount > 0,
+                label: Text('$alertCount'),
+                child: const Icon(Icons.notifications_outlined),
+              ),
+              label: 'Alerts',
+            ),
+          ],
+        ),
       ),
     );
   }

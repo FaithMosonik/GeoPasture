@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:workmanager/workmanager.dart';
 
+import 'core/notifiers/alert_count_notifier.dart';
 import 'core/services/data_seeder.dart';
 import 'core/services/notification_service.dart';
 import 'core/workers/alert_worker.dart';
@@ -61,10 +62,16 @@ Future<void> main() async {
     constraints: Constraints(networkType: NetworkType.notRequired),
   );
 
+  final alertCountNotifier = AlertCountNotifier(repo);
+  await alertCountNotifier.refresh();
+
   runApp(
     MultiProvider(
       providers: [
         Provider<BehaviourRepository>.value(value: repo),
+        ChangeNotifierProvider<AlertCountNotifier>.value(
+          value: alertCountNotifier,
+        ),
       ],
       child: const GeoPastureApp(),
     ),

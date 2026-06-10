@@ -69,7 +69,8 @@ class TimeBudgetDonutChart extends StatelessWidget {
         const SizedBox(height: 12),
         // Vertical legend — name on left, hours on right
         ...percents.asMap().entries.map((e) {
-          final hours = (e.value / 100 * 24);
+          final monitoredHours = budget.totalWindows * 10 / 3600;
+          final hours = e.value / 100 * monitoredHours;
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 5),
             child: Row(
