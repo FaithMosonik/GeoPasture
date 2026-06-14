@@ -7,6 +7,7 @@ import '../../../data/repositories/behaviour_repository.dart';
 import '../../../database/app_database.dart';
 import '../../../database/tables/distress_alert.dart';
 import '../../../shared/theme/app_theme.dart';
+import '../../../sync/offline_demo_screen.dart'; // adjust path if needed
 
 class AlertDetailScreen extends StatelessWidget {
   final DistressAlertData alert;
@@ -62,6 +63,17 @@ class AlertDetailScreen extends StatelessWidget {
               value: isUnread ? 'Unacknowledged' : 'Acknowledged',
             ),
             const Spacer(),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const OfflineDemoScreen()),
+                ),
+                child: const Text('Offline Demo'),
+              ),
+            ),
+            const SizedBox(height: 8),
             if (isUnread)
               SizedBox(
                 width: double.infinity,

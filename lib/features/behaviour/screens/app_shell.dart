@@ -5,6 +5,8 @@ import '../../../core/notifiers/alert_count_notifier.dart';
 import 'alerts_screen.dart';
 import 'herd_behaviour_overview_screen.dart';
 import 'individual_animal_behaviour_screen.dart';
+import '../../../sync/offline_demo_screen.dart';
+import '../../../sync/connectivity_monitor.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -37,6 +39,16 @@ class _AppShellState extends State<AppShell> {
 
     return Scaffold(
       body: IndexedStack(index: _currentIndex, children: _screens),
+      floatingActionButton: FloatingActionButton.extended(
+         onPressed: () => Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const OfflineDemoScreen()),
+    ),
+    backgroundColor: const Color(0xFF2E7D32),
+    icon: const Icon(Icons.cloud_off, color: Colors.white),
+    label: const Text('Offline Demo', style: TextStyle(color: Colors.white)),
+  ),
+
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,

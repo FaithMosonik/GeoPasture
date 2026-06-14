@@ -18,14 +18,21 @@ import 'features/behaviour/services/classification_service.dart';
 import 'features/behaviour/services/preprocessing_service.dart';
 import 'features/behaviour/services/viterbi_service.dart';
 import 'shared/theme/app_theme.dart';
+import 'sync/connectivity_monitor.dart';
+import 'sync/sync_repository.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Firebase requires google-services.json (Android) / GoogleService-Info.plist (iOS).
-  // Guarded so the app still launches for local development before those files are added.
-  try {
+
+  // ── Firebase ───────────────────────────────────────────────────────────
+  // Once you have google-services.json, run:
+  //   dart pub global activate flutterfire_cli
+  //   flutterfire configure --project=your-firebase-project-id
+  // Then replace this block with:
+  //   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
     await Firebase.initializeApp();
-  } catch (_) {}
+  
 
   // ── Database & DAOs ────────────────────────────────────────────────────
   final db = AppDatabase();
@@ -33,6 +40,11 @@ Future<void> main() async {
   final animalDao = AnimalDao(db);
   final classificationDao = BehaviourClassificationDao(db);
   final distressAlertDao = DistressAlertDao(db);
+
+  // ── Sync ───────────────────────────────────────────────────────────────
+  final syncRepository = SyncRepository(db);
+  final connectivityMonitor = ConnectivityMonitor();
+  await connectivityMonitor.start();
 
   // ── Services ───────────────────────────────────────────────────────────
   final classificationService = ClassificationService();
@@ -68,6 +80,9 @@ Future<void> main() async {
   runApp(
     MultiProvider(
       providers: [
+        Provider<AppDatabase>.value(value: db),
+        Provider<SyncRepository>.value(value: syncRepository),
+        Provider<ConnectivityMonitor>.value(value: connectivityMonitor),
         Provider<BehaviourRepository>.value(value: repo),
         ChangeNotifierProvider<AlertCountNotifier>.value(
           value: alertCountNotifier,

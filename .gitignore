@@ -127,4 +127,4 @@ ios/Runner/GoogleService-Info.plist
 *.env
 
 # TFLite model — large file, distribute via Drive not Git
-assets/models/*.tflite
+# assets/models/*.tflite
